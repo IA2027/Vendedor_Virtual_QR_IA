@@ -1,0 +1,455 @@
+
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>ZERO AI SHOP | Vendedor Virtual</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<header class="header">
+
+    <div class="logo">
+        ZERO <span>AI SHOP</span>
+    </div>
+
+    <p>Inteligencia artificial para vender mejor</p>
+
+    <div class="estado">
+        <span class="punto"></span>
+        Vendedor virtual disponible
+    </div>
+
+</header>
+
+
+<main class="contenedor">
+
+    <!-- PRESENTACION -->
+
+    <section class="hero">
+
+        <div>
+
+            <span class="etiqueta">COMERCIO INTELIGENTE</span>
+
+            <h1>Encontrá lo que necesitás.</h1>
+
+            <p>
+                Explorá nuestros productos y recibí
+                recomendaciones de nuestro asistente
+                de inteligencia artificial.
+            </p>
+
+            <a href="#productos" class="boton-principal">
+                Explorar productos
+            </a>
+
+        </div>
+
+        <div class="hero-icono">
+            <span>AI</span>
+            <div class="orbita"></div>
+        </div>
+
+    </section>
+
+
+    <!-- CATALOGO -->
+
+    <section id="productos" class="seccion">
+
+        <div class="titulo-seccion">
+
+            <div>
+                <span class="etiqueta">NUESTRO CATÁLOGO</span>
+                <h2>Productos destacados</h2>
+            </div>
+
+            <span class="contador">
+                {{ productos|length }} productos
+            </span>
+
+        </div>
+
+
+        <div class="productos">
+
+            {% for p in productos %}
+
+            <article class="producto">
+
+                <div class="producto-icono">
+                    <span>▣</span>
+                </div>
+
+                <h3>{{ p.nombre }}</h3>
+
+                <p class="descripcion">
+                    {{ p.descripcion }}
+                </p>
+
+                <div class="precio">
+                    ${{ "{:,.2f}".format(p.precio) }}
+                </div>
+
+                {% if p.stock > 0 %}
+
+                    <span class="disponible">
+                        Disponible: {{ p.stock }} unidades
+                    </span>
+
+                {% else %}
+
+                    <span class="agotado">
+                        Sin stock
+                    </span>
+
+                {% endif %}
+
+                <button
+                    class="boton-consultar"
+                    onclick="consultarProducto('{{ p.nombre|e }}')">
+
+                    Consultar producto
+
+                </button>
+
+            </article>
+
+            {% endfor %}
+
+        </div>
+
+    </section>
+
+
+    <!-- CHAT IA -->
+
+    <section class="seccion chat-seccion" id="asistente">
+
+        <div class="titulo-seccion">
+
+            <div>
+                <span class="etiqueta">ASISTENTE INTELIGENTE</span>
+                <h2>Hablá con nuestro vendedor IA</h2>
+            </div>
+
+        </div>
+
+
+        <div class="chat-contenedor">
+
+            <div class="chat-cabecera">
+
+                <div class="avatar">
+                    AI
+                </div>
+
+                <div>
+                    <strong>ZERO AI Assistant</strong>
+                    <small>Atención automatizada con Gemini</small>
+                </div>
+
+                <span class="punto"></span>
+
+            </div>
+
+
+            <div id="chat" class="chat-mensajes">
+
+                <div class="mensaje bot">
+
+                    ¡Hola! Soy tu vendedor virtual.
+
+                    Puedo ayudarte a encontrar productos,
+                    comparar precios y consultar disponibilidad.
+
+                    ¿Qué estás buscando?
+
+                </div>
+
+            </div>
+
+
+            <div class="sugerencias">
+
+                <button onclick="preguntar('¿Qué productos tienen?')">
+                    Ver catálogo
+                </button>
+
+                <button onclick="preguntar('¿Qué producto me recomendás?')">
+                    Recomendaciones
+                </button>
+
+                <button onclick="preguntar('¿Qué productos tienen poco stock?')">
+                    Consultar stock
+                </button>
+
+            </div>
+
+
+            <div class="entrada">
+
+                <input
+                    type="text"
+                    id="mensaje"
+                    placeholder="Escribí tu consulta..."
+                    maxlength="1000"
+                    autocomplete="off"
+                >
+
+                <button id="btnEnviar" onclick="enviarMensaje()">
+                    Enviar
+                </button>
+
+            </div>
+
+            <p id="estado" class="estado-chat"></p>
+
+        </div>
+
+    </section>
+
+
+    <!-- CODIGO QR -->
+
+    <section class="seccion qr-seccion">
+
+        <div class="qr-texto">
+
+            <span class="etiqueta">ACCESO DIGITAL</span>
+
+            <h2>Tu tienda, siempre disponible.</h2>
+
+            <p>
+                Escaneá este código QR desde tu celular
+                para acceder al catálogo y conversar
+                con nuestro vendedor virtual.
+            </p>
+
+            <button
+                class="boton-principal"
+                onclick="window.print()">
+
+                Imprimir código QR
+
+            </button>
+
+        </div>
+
+
+        <div class="qr-imagen">
+
+            <img
+                src="{{ url_for('generar_qr') }}"
+                alt="Código QR de la tienda"
+            >
+
+            <strong>ESCANEÁ Y COMENZÁ</strong>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+<footer>
+
+    <h3>ZERO AI SHOP</h3>
+
+    <p>Desarrollado con Python + Gemini AI</p>
+
+    <small>Inteligencia artificial aplicada a los negocios.</small>
+
+</footer>
+
+
+<script>
+
+let historial = [];
+
+let esperandoRespuesta = false;
+
+
+// ==================================
+// AGREGAR MENSAJES AL CHAT
+// ==================================
+
+function agregarMensaje(texto, tipo) {
+
+    const chat = document.getElementById("chat");
+
+    const mensaje = document.createElement("div");
+
+    mensaje.className = "mensaje " + tipo;
+
+    mensaje.textContent = texto;
+
+    chat.appendChild(mensaje);
+
+    chat.scrollTop = chat.scrollHeight;
+
+}
+
+
+// ==================================
+// CONSULTAR GEMINI
+// ==================================
+
+async function enviarMensaje() {
+
+    if (esperandoRespuesta) return;
+
+    const campo = document.getElementById("mensaje");
+
+    const estado = document.getElementById("estado");
+
+    const boton = document.getElementById("btnEnviar");
+
+    const mensaje = campo.value.trim();
+
+    if (!mensaje) return;
+
+    agregarMensaje(mensaje, "cliente");
+
+    campo.value = "";
+
+    esperandoRespuesta = true;
+
+    boton.disabled = true;
+
+    boton.textContent = "Enviando...";
+
+    estado.textContent = "Gemini está analizando tu consulta...";
+
+    try {
+
+        const respuesta = await fetch("/api/chat", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+
+                mensaje: mensaje,
+
+                historial: historial
+
+            })
+
+        });
+
+        const datos = await respuesta.json();
+
+        if (!respuesta.ok) {
+
+            throw new Error(
+                datos.respuesta || "Error de comunicación"
+            );
+
+        }
+
+        agregarMensaje(datos.respuesta, "bot");
+
+        historial.push({
+            role: "user",
+            content: mensaje
+        });
+
+        historial.push({
+            role: "assistant",
+            content: datos.respuesta
+        });
+
+        historial = historial.slice(-8);
+
+        estado.textContent = "";
+
+    }
+
+    catch (error) {
+
+        estado.textContent = error.message;
+
+    }
+
+    finally {
+
+        esperandoRespuesta = false;
+
+        boton.disabled = false;
+
+        boton.textContent = "Enviar";
+
+    }
+
+}
+
+
+// ==================================
+// BOTONES DE CONSULTA RAPIDA
+// ==================================
+
+function preguntar(texto) {
+
+    document.getElementById("mensaje").value = texto;
+
+    enviarMensaje();
+
+}
+
+
+// ==================================
+// CONSULTAR UN PRODUCTO
+// ==================================
+
+function consultarProducto(nombre) {
+
+    document.getElementById("mensaje").value =
+        "Quiero información sobre " + nombre;
+
+    document.getElementById("asistente").scrollIntoView({
+        behavior: "smooth"
+    });
+
+    enviarMensaje();
+
+}
+
+
+// ==================================
+// ENTER PARA ENVIAR
+// ==================================
+
+document.getElementById("mensaje").addEventListener(
+    "keydown",
+    function(event) {
+
+        if (event.key === "Enter") {
+
+            enviarMensaje();
+
+        }
+
+    }
+);
+
+</script>
+
+</body>
+
+</html>
